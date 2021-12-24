@@ -6,14 +6,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/milvus-io/milvusctl/cmd"
+	"github.com/milvus-io/milvusctl/internal/cmd"
 	"os"
 )
 
 func main() {
-	rootCmd := cmd.GetRootCmd(os.Args)
+	rootCmd := cmd.NewMilvusCmd()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
+
