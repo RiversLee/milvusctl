@@ -6,14 +6,19 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/milvus-io/milvusctl/internal/cmd/create"
+	"github.com/milvus-io/milvusctl/internal/cmd/delete"
+	"github.com/milvus-io/milvusctl/internal/cmd/portforward"
 	"github.com/milvus-io/milvusctl/internal/cmd/operator"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/cmd/plugin"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"os"
 	"os/exec"
 	"runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"syscall"
 )
 type MilvusctlOptions struct {
@@ -24,7 +29,7 @@ type MilvusctlOptions struct {
 }
 
 // rootCmd represents the base command when called without any subcommands
-func NewMilvusCmd() *cobra.Command {
+func NewMilvusCmd(cfg *action.Configuration,client *client.Client) *cobra.Command {
 	var milvusCmd = &cobra.Command{
 		Use:   "milvusctl",
 		Short: "milvus application control interface",
@@ -50,7 +55,10 @@ func NewMilvusCmd() *cobra.Command {
 
 
 	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
-	milvusCmd.AddCommand(operator.NewOperatorCmd(f,o.IOStreams))
+	milvusCmd.AddCommand(operator.NewOperatorCmd(cfg,f,o.IOStreams,client))
+	milvusCmd.AddCommand(create.NewMilvusCreateCmd(f,o.IOStreams))
+	milvusCmd.AddCommand(portforward.NewPortForwardCmd(f,o.IOStreams))
+	milvusCmd.AddCommand(delete.NewMilvusDeleteCmd(f,o.IOStreams))
 	return milvusCmd
 }
 

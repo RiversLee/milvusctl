@@ -1,14 +1,21 @@
 package operator
 
 import (
+	"context"
+	"github.com/milvus-io/milvusctl/pkg"
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	kubectldelete "k8s.io/kubectl/pkg/cmd/delete"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
-func NewOperatorUninstallCmd(f cmdutil.Factory, ioStreams genericclioptions.IOStreams) *cobra.Command {
+func NewOperatorUninstallCmd(cfg *action.Configuration,f cmdutil.Factory, ioStreams genericclioptions.IOStreams,client *client.Client) *cobra.Command {
+	var deleteCertManager bool
+
 	deletflags := kubectldelete.NewDeleteFlags("containing the operator to delete.")
 	deleteCmd := &cobra.Command{
 		Use: "uninstall",
@@ -16,14 +23,31 @@ func NewOperatorUninstallCmd(f cmdutil.Factory, ioStreams genericclioptions.IOSt
 		Long: "The uninstall subcommand uninstalls the milvus operator controller in the cluster",
 		Run: func(cmd *cobra.Command, args []string) {
 			o,err := deletflags.ToOptions(nil,ioStreams)
+			 mp,err := pkg.FetchDataFromSecret(context.TODO(),*client);
+			 if err != nil {
+				log.Error(err)
+			}
+			if len(o.FilenameOptions.Filenames) ==0{
+				o.FilenameOptions.Filenames = append(o.FilenameOptions.Filenames,mp["deploy"])
+			}
 			cmdutil.CheckErr(err)
 			cmdutil.CheckErr(o.Complete(f,args,cmd))
 			cmdutil.CheckErr(o.Validate())
 			cmdutil.CheckErr(o.RunDelete(f))
+			if deleteCertManager == true {
+				options := &pkg.UnInstallOptions{
+					Cfg: cfg,
+					Client: action.NewUninstall(cfg),
+				}
+
+				options.RunUninstall(context.TODO())
+			}
+			pkg.DeleteMilvusOperatorSecert(context.TODO(),*client)
 		},
 	}
 	deletflags.AddFlags(deleteCmd)
 	cmdutil.AddDryRunFlag(deleteCmd)
+	deleteCmd.Flags().BoolVar(&deleteCertManager,"delete-cert-manager",false,"delete the cert-manager if it installed")
 	return deleteCmd
 }
 
