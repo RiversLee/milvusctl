@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"github.com/milvus-io/milvusctl/internal/cmd/create"
 	"github.com/milvus-io/milvusctl/internal/cmd/delete"
-	"github.com/milvus-io/milvusctl/internal/cmd/portforward"
 	"github.com/milvus-io/milvusctl/internal/cmd/operator"
+	"github.com/milvus-io/milvusctl/internal/cmd/portforward"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -30,20 +30,26 @@ type MilvusctlOptions struct {
 
 // rootCmd represents the base command when called without any subcommands
 func NewMilvusCmd(cfg *action.Configuration,client *client.Client) *cobra.Command {
-	var milvusCmd = &cobra.Command{
-		Use:   "milvusctl",
-		Short: "milvus application control interface",
-		Long: `milvus configuration command line utility for service operators to debug and diagnose their milvus application`,
-		// Uncomment the following line if your bare application
-		// has an action associated with it:
-		Run: runHelp,
-	}
 	o := MilvusctlOptions{
 		PluginHandler: NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes),
 		Arguments:     os.Args,
 		ConfigFlags:   defaultConfigFlags,
 		IOStreams:     genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
 	}
+
+	var milvusCmd = &cobra.Command{
+		Use:   "milvusctl",
+		Short: "milvus application controls interface",
+		Long: `milvus configuration command line utility for service operators to deploy and diagnose their milvus application
+
+Find more information at:
+	https://github.com/milvus-io/milvusctl
+		`,
+		// Uncomment the following line if your bare application
+		// has an action associated with it:
+		Run: runHelp,
+	}
+
 	flags := milvusCmd.PersistentFlags()
 	kubeConfigFlags := o.ConfigFlags
 	if kubeConfigFlags == nil {
@@ -55,8 +61,9 @@ func NewMilvusCmd(cfg *action.Configuration,client *client.Client) *cobra.Comman
 
 
 	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
+
 	milvusCmd.AddCommand(operator.NewOperatorCmd(cfg,f,o.IOStreams,client))
-	milvusCmd.AddCommand(create.NewMilvusCreateCmd(f,o.IOStreams))
+	milvusCmd.AddCommand(create.NewMilvusCreateCmd(f,o.IOStreams,client))
 	milvusCmd.AddCommand(portforward.NewPortForwardCmd(f,o.IOStreams))
 	milvusCmd.AddCommand(delete.NewMilvusDeleteCmd(f,o.IOStreams))
 	return milvusCmd

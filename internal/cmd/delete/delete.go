@@ -7,7 +7,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 type MilvusDeleteOptions struct {
-	WithDeletions string
+	WithDeletions bool
+	Namespace string
 	Deleteflags *kubectldelete.DeleteFlags
 	DeletionOptions *kubectldelete.DeleteOptions
 }
@@ -16,7 +17,8 @@ func NewMivlusDeleteOptions(ioStreams genericclioptions.IOStreams) *MilvusDelete
 	o,_ := deletflags.ToOptions(nil,ioStreams)
 	return &MilvusDeleteOptions{
 		Deleteflags: deletflags,
-		WithDeletions: "",
+		WithDeletions: false,
+		Namespace: "default",
 		DeletionOptions: o,
 	}
 }
@@ -24,7 +26,7 @@ func NewMilvusDeleteCmd(f cmdutil.Factory, ioStreams genericclioptions.IOStreams
 	o := NewMivlusDeleteOptions(ioStreams)
 	deleteCmd := &cobra.Command{
 		Use: "delete",
-		Short: "delete milvuse in kubernetes cluster",
+		Short: "delete milvus in kubernetes cluster",
 		Long: "The deelte subcommand uninstalls the milvus version like standalone or cluster in the cluster",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			
@@ -35,6 +37,14 @@ func NewMilvusDeleteCmd(f cmdutil.Factory, ioStreams genericclioptions.IOStreams
 	}
 	o.Deleteflags.AddFlags(deleteCmd)
 	cmdutil.AddDryRunFlag(deleteCmd)
-	deleteCmd.Flags().StringVar(&o.WithDeletions,"withe-deletion",o.WithDeletions,"automatically add pvc deletion parameter on deletion")
+	deleteCmd.Flags().BoolVar(&o.WithDeletions,"withe-deletion",o.WithDeletions,"automatically add pvc deletion parameter on deletion")
 	return deleteCmd
+}
+func (o *MilvusDeleteOptions) Run() error {
+	if o.WithDeletions == false {
+
+	}else {
+
+	}
+	return nil
 }

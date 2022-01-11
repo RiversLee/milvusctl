@@ -3,8 +3,12 @@ module github.com/milvus-io/milvusctl
 go 1.17
 
 require (
+	github.com/fatih/structs v1.1.0
+	github.com/goinggo/mapstructure v0.0.0-20140717182941-194205d9b4a9
 	github.com/jetstack/cert-manager v1.6.1
-	github.com/opentracing/opentracing-go v1.1.0
+	github.com/milvus-io/milvus-operator v0.2.5
+	github.com/opentracing/opentracing-go v1.2.0
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.3.0
 	helm.sh/helm/v3 v3.7.2
 	k8s.io/api v0.23.0
@@ -12,11 +16,12 @@ require (
 	k8s.io/kubectl v0.22.4
 	k8s.io/kubernetes v1.13.0
 	sigs.k8s.io/controller-runtime v0.11.0
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
 	k8s.io/apimachinery v0.23.0
-	k8s.io/client-go v0.23.0 // indirect
+	k8s.io/client-go v0.23.0
 	k8s.io/component-base v0.23.0 // indirect
 )
 
@@ -32,7 +37,9 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/Masterminds/squirrel v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
@@ -56,8 +63,10 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
+	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/fvbommel/sortorder v1.0.1 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
@@ -66,6 +75,7 @@ require (
 	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
@@ -92,9 +102,9 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/mitchellh/copystructure v1.1.1 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
-	github.com/mitchellh/reflectwalk v1.0.1 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
@@ -105,12 +115,11 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.28.0 // indirect
-	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20210614095031-55d5740dbbcc // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
@@ -131,6 +140,7 @@ require (
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.42.0 // indirect
@@ -149,7 +159,6 @@ require (
 	sigs.k8s.io/kustomize/api v0.10.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 replace (

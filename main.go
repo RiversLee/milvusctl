@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/milvus-io/milvus-operator/apis/milvus.io/v1alpha1"
 	"github.com/milvus-io/milvusctl/internal/cmd"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
@@ -21,7 +22,9 @@ import (
 	"sigs.k8s.io/yaml"
 	"strings"
 )
-var settings = cli.New()
+var (
+	settings = cli.New()
+)
 
 func debug(format string, v ...interface{}) {
 	if settings.Debug {
@@ -29,7 +32,6 @@ func debug(format string, v ...interface{}) {
 		log.Output(2, fmt.Sprintf(format, v...))
 	}
 }
-
 func main() {
 	cfg := new(action.Configuration)
 	var client client.Client
@@ -44,6 +46,7 @@ func main() {
 			loadReleasesInMemory(cfg)
 		}
 		client = loadClientset()
+
 	})
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -90,8 +93,9 @@ func loadReleasesInMemory(actionConfig *action.Configuration) {
 }
 
 func loadClientset() client.Client {
-
 	cfg, _ := config.GetConfig()
 	client, _ := client.New(cfg, client.Options{})
+	scheme := client.Scheme()
+	v1alpha1.AddToScheme(scheme)
 	return client
 }
