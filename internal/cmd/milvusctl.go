@@ -65,7 +65,7 @@ Find more information at:
 	milvusCmd.AddCommand(operator.NewOperatorCmd(cfg,f,o.IOStreams,client))
 	milvusCmd.AddCommand(create.NewMilvusCreateCmd(f,o.IOStreams,client))
 	milvusCmd.AddCommand(portforward.NewPortForwardCmd(f,o.IOStreams))
-	milvusCmd.AddCommand(delete.NewMilvusDeleteCmd(f,o.IOStreams))
+	milvusCmd.AddCommand(delete.NewMilvusDeleteCmd(f,o.IOStreams,client))
 	return milvusCmd
 }
 

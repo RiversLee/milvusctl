@@ -3,23 +3,24 @@ package create
 import (
 	"context"
 	"fmt"
-	"helm.sh/helm/v3/pkg/strvals"
 	"github.com/milvus-io/milvus-operator/apis/milvus.io/v1alpha1"
-	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/api/errors"
 	pkgerr "github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/strvals"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	kubectlcreate "k8s.io/kubectl/pkg/cmd/create"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubectl/pkg/util/i18n"
+	"k8s.io/kubectl/pkg/util/templates"
 	"log"
 	"os"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"github.com/fatih/structs"
-	"github.com/goinggo/mapstructure"
+	"strings"
 )
 var (
 	createLong = templates.LongDesc(i18n.T(`
@@ -31,6 +32,7 @@ type MilvusCreateOptions struct {
 	Mode string
 	Type string
 	Values []string
+	Namespace string
 	CreateOptions *kubectlcreate.CreateOptions
 	ResouceSetting map[string]interface{}
 }
@@ -38,6 +40,7 @@ func NewMivlusCreateOptions(ioStreams genericclioptions.IOStreams) *MilvusCreate
 	return &MilvusCreateOptions{
 		Type: "",
 		Mode: "",
+		Namespace: "default",
 		CreateOptions: kubectlcreate.NewCreateOptions(ioStreams),
 	}
 }
@@ -59,7 +62,7 @@ func NewMilvusCreateCmd(f cmdutil.Factory, ioStreams genericclioptions.IOStreams
 			//}.
 			cmdutil.CheckErr(o.Complete(f, cmd))
 			cmdutil.CheckErr(o.ValidateArgs(cmd, args))
-			//cmdutil.CheckErr(o.Run(f, cmd,client))
+			cmdutil.CheckErr(o.Run(f, cmd,client))
 		},
 	}
 	o.CreateOptions.RecordFlags.AddFlags(createCmd)
@@ -72,9 +75,10 @@ func NewMilvusCreateCmd(f cmdutil.Factory, ioStreams genericclioptions.IOStreams
 	cmdutil.AddDryRunFlag(createCmd)
 
 	createCmd.Flags().StringVarP(&o.Mode,"mode","m",o.Mode,"use mode parameter to choose milvus standalone or cluster")
+	createCmd.Flags().StringVarP(&o.Namespace,"namespace","n",o.Namespace,"use type parameter to choose install namespace")
 	createCmd.Flags().StringVarP(&o.Type,"type","t",o.Type,"use type parameter to choose milvus cluster minimal,medium or large")
 	createCmd.Flags().StringArrayVar(&o.Values,"set",[]string{},"the resource requirement requests for milvus cluster")
-	//_ = createCmd.MarkFlagRequired("mode")
+	_ = createCmd.MarkFlagRequired("mode")
 	
 	return createCmd
 }
@@ -93,8 +97,6 @@ func (o *MilvusCreateOptions) ValidateArgs(cmd *cobra.Command,args []string) err
 	if err != nil {
 		return err
 	}
-	spec := new(v1alpha1.MilvusSpec)
-	fmt.Println(spec)
 	if len(o.Values)  > 0 {
 		base := map[string]interface{}{}
 		for _,value := range o.Values {
@@ -119,7 +121,7 @@ func (o *MilvusCreateOptions) Run(f cmdutil.Factory, cmd *cobra.Command,client *
 
 	}
 	if o.Mode == "standalone" {
-		if _,err = newMilvusStandalone(*client,context.TODO(),o.Type);err != nil {
+		if _,err = o.newMilvusStandalone(*client,context.TODO());err != nil {
 			return err
 		}
 	}
@@ -135,49 +137,45 @@ func (o *MilvusCreateOptions) Run(f cmdutil.Factory, cmd *cobra.Command,client *
 //	milvus.Spec.
 //	return nil
 //}
-func runSetMilvusClusterConfig(setting string, milvusCluster *v1alpha1.MilvusCluster) error {
-	if len(setting) == 0 {
-		return nil
-	}
-	return nil
-}
-func newMilvusStandalone(client client.Client,ctx context.Context,Type string) (*v1alpha1.Milvus,error) {
+
+func (o *MilvusCreateOptions)newMilvusStandalone(client client.Client,ctx context.Context) (*v1alpha1.Milvus,error) {
 	log.Printf("Creating the milvus in default namespace")
-	switch Type {
+	milvus := &v1alpha1.Milvus{}
+	switch o.Type {
 	case "minimal":
+		namespacedName := types.NamespacedName{
+			Name: "milvus",
+			Namespace: o.Namespace,
+		}
+		err := client.Get(ctx,namespacedName,milvus)
+		if errors.IsNotFound(err) {
+			newMilvus := &v1alpha1.Milvus{
+				ObjectMeta:metav1.ObjectMeta{
+					Name:"milvus",
+					Namespace: o.Namespace,
+				},
+			}
+			newMilvus.Spec,err = mapCoverToMilvusStandaloneSpec(coalesceValues(log.Printf,reflectToMap(milvus.Spec),o.ResouceSetting))
+			if err != nil {
+				return nil,err
+			}
+			err = client.Create(ctx,newMilvus)
+			if err != nil{
+				return nil ,err
+			}
+		}else{
+			milvus.Spec,err = mapCoverToMilvusStandaloneSpec(coalesceValues(log.Printf,reflectToMap(milvus.Spec),o.ResouceSetting))
+			if err != nil {
+				return nil,err
+			}
+			err = client.Update(ctx,milvus)
+			if err != nil{
+				return nil ,err
+			}
+		}
 	case "medium":
 	case "large":
 		
-	}
-	namespacedName := types.NamespacedName{
-		Name: "milvus",
-		Namespace: "default",
-	}
-	milvus := &v1alpha1.Milvus{}
-	err := client.Get(ctx,namespacedName,milvus)
-	if errors.IsNotFound(err) {
-		milvus = &v1alpha1.Milvus{
-			ObjectMeta:metav1.ObjectMeta{
-				Name:"milvus",
-				Namespace: "default",
-			},
-		}
-		//milvus.Spec = v1alpha1.MilvusSpec{
-		//	Dep: v1alpha1.MilvusDependencies{
-		//
-		//	},
-		//	ComponentSpec:v1alpha1.ComponentSpec{
-		//
-		//	},
-		//	ServiceType: "",
-		//	Conf: v1alpha1.Values{
-		//
-		//	},
-		//}
-	}
-	err = client.Create(ctx,milvus)
-	if err != nil{
-		return nil ,err
 	}
 	return milvus,nil
 }
@@ -277,6 +275,7 @@ func coalesceTablesFullKey(printf printFn, dst, src map[string]interface{}) map[
 			printf("warning: destination for %s is a table. Ignoring non-table value (%v)", val)
 		}
 	}
+	fmt.Println(dst)
 	return dst
 }
 
@@ -285,19 +284,72 @@ func istable(v interface{}) bool {
 	_, ok := v.(map[string]interface{})
 	return ok
 }
-func  milvusStruct2Map(milvusSpec *v1alpha1.MilvusSpec) map[string]interface{} {
-	return structs.Map(milvusSpec)
+func  reflectToMap(obj interface{}) map[string]interface{} {
+	t := reflect.TypeOf(obj)
+	v := reflect.ValueOf(obj)
+
+	var data = make(map[string]interface{})
+	for i := 0; i < t.NumField(); i++ {
+
+		if v.Field(i).CanInterface() {
+
+			//判断是否是嵌套结构
+			if v.Field(i).Type().Kind() == reflect.Struct{
+				if t.Field(i).Anonymous {
+					mergeMap(data,reflectToMap(v.Field(i).Interface()))
+				}else{
+					data[readTag(string(t.Field(i).Tag.Get("json")))] = reflectToMap(v.Field(i).Interface())
+
+				}
+			}else{
+				data[readTag(string(t.Field(i).Tag.Get("json")))] = v.Field(i).Interface()
+
+			}
+		}
+	}
+	return data
+
 }
-func milvusMap2Struect(milvusMap map[string]interface{}) *v1alpha1.MilvusSpec {
-	var milvus v1alpha1.MilvusSpec
-	mapstructure.Decode(milvusMap, &milvus)
-	return &milvus
+
+
+func mapCoverToMilvusStandaloneSpec(Map map[string]interface{}) (v1alpha1.MilvusSpec,error) {
+	milvusSpec := v1alpha1.MilvusSpec{}
+	instanceByte, err := json.Marshal(Map)
+	if err != nil {
+		return milvusSpec,err
+	}
+
+	err = json.Unmarshal(instanceByte,&milvusSpec)
+	if err != nil {
+		return milvusSpec,err
+	}
+	return milvusSpec,nil
 }
-func milvusClusterStruct2Map(milvusClusterSpec *v1alpha1.MilvusClusterSpec) map[string]interface{} {
-	return structs.Map(milvusClusterSpec)
+
+func mapCoverToMilvusClusterSpec(Map map[string]interface{}) (*v1alpha1.MilvusClusterSpec,error) {
+	instanceByte, err := json.Marshal(Map)
+	if err != nil {
+		return nil,err
+	}
+	milvusClusterSpec := v1alpha1.MilvusClusterSpec{}
+	err = json.Unmarshal(instanceByte,&milvusClusterSpec)
+	if err != nil {
+		return nil,err
+	}
+	return &milvusClusterSpec,nil
 }
-func milvusClusterMap2Struct(milvusClusterMap map[string]interface{}) *v1alpha1.MilvusClusterSpec {
-	var milvusCluster v1alpha1.MilvusClusterSpec
-	mapstructure.Decode(milvusClusterMap, &milvusCluster)
-	return &milvusCluster
+
+func mergeMap(src,dest map[string]interface{}) {
+	for i,v := range dest {
+		src[i] = v
+	}
+}
+func readTag( tag string) string {
+	if tag != "" {
+		res := strings.Split(tag, ",")
+		if res[0] != "" {
+			return res[0]
+		}
+	}
+	return tag
 }
